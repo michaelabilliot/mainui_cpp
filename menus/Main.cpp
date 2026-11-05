@@ -44,6 +44,7 @@ public:
 	CMenuMain() : CMenuFramework( "CMenuMain" ) { }
 
 	bool KeyDown( int key ) override;
+	void Show() override;
 
 private:
 	void _Init() override;
@@ -80,6 +81,8 @@ private:
 	// quit dialog
 	CMenuYesNoMessageBox dialog;
 
+	bool cofMenu = false;
+	CMenuAction pauseResume, pauseNew, pauseLoad, pauseOptions, pauseQuit;
 	bool bTrainMap;
 	bool bCustomGame;
 };
@@ -165,6 +168,39 @@ void CMenuMain::HazardCourseCb()
 
 void CMenuMain::_Init( void )
 {
+	cofMenu = !stricmp( gMenu.m_gameinfo.gamefolder, "CryOfFear" );
+	// Runtime-only signal: render the paused world without changing preferences.
+	EngFuncs::CvarRegister( "ui_cof_pause_world", "0", 0 );
+	EngFuncs::CvarSetValue( "ui_cof_pause_world", cofMenu ? 1.0f : 0.0f );
+	if( cofMenu )
+	{
+		pauseResume.SetNameAndStatus( "Resume game", nullptr );
+		pauseNew.SetNameAndStatus( "New game", nullptr );
+		pauseLoad.SetNameAndStatus( "Load game", nullptr );
+		pauseOptions.SetNameAndStatus( "Options", nullptr );
+		pauseQuit.SetNameAndStatus( "Quit", nullptr );
+		pauseResume.onReleased = UI_CloseMenu;
+		pauseNew.onReleased = UI_NewGame_Menu;
+		pauseLoad.onReleased = UI_LoadGame_Menu;
+		pauseOptions.onReleased = UI_Options_Menu;
+		pauseQuit.onReleased = VoidCb( &CMenuMain::QuitDialogCb );
+		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseOptions, &pauseQuit };
+		for( auto entry : entries )
+		{
+			entry->iFlags = QMF_DROPSHADOW;
+			entry->eTextAlignment = QM_LEFT;
+			entry->eFocusAnimation = QM_HIGHLIGHTIFFOCUS;
+			entry->colorBase = 0xFFBDBDBD;
+			entry->colorFocus = 0xFFFFFFFF;
+			AddItem( *entry );
+		}
+		const bool available = EngFuncs::CheckGameDll();
+		pauseNew.SetGrayed( !available );
+		pauseLoad.SetGrayed( !available );
+		dialog.Link( this );
+		return;
+	}
+
 	if( gMenu.m_gameinfo.trainmap[0] && stricmp( gMenu.m_gameinfo.trainmap, gMenu.m_gameinfo.startmap ) != 0 )
 		bTrainMap = true;
 	else bTrainMap = false;
@@ -309,6 +345,23 @@ UI_Main_Init
 */
 void CMenuMain::VidInit( bool connected )
 {
+	if( cofMenu )
+	{
+		// 32px left inset, 28px row pitch, 72px bottom inset at 1080p.
+		const HFont face = CFontBuilder( "Times New Roman", Q_max( 9, int( 11 * uiStatic.scaleY + 0.5f ) ), 700 ).Create();
+		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseOptions, &pauseQuit };
+		int row = 0;
+		for( auto entry : entries )
+		{
+			entry->font = face;
+			entry->charSize = 11;
+			entry->SetRect( 23, 708 - 20 * ( connected ? 4 : 3 ) + 20 * row, 240, 20 );
+			if( entry != &pauseResume || connected ) ++row;
+		}
+		pauseResume.SetVisibility( connected );
+		return;
+	}
+
 	int hoffset = ( 70 / 640.0 ) * 1024.0;
 
 	// in original menu Previews is located at specific point
@@ -391,8 +444,28 @@ void CMenuMain::_VidInit()
 	VidInit( CL_IsActive() );
 }
 
+void CMenuMain::Show()
+{
+	CMenuFramework::Show();
+	if( cofMenu )
+	{
+		VidInit( CL_IsActive() );
+		CalcPosition();
+		CalcSizes();
+		VidInitItems();
+		DisableTransition();
+		SetCursor( CL_IsActive() ? 0 : 1 );
+	}
+}
+
 void CMenuMain::Think()
 {
+	if( cofMenu )
+	{
+		CMenuFramework::Think();
+		return;
+	}
+
 	if( gpGlobals->developer )
 	{
 		if( !console.IsVisible( ))

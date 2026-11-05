@@ -19,6 +19,9 @@ GNU General Public License for more details.
 #include "BackgroundBitmap.h"
 #include "Utils.h"
 #include "BaseWindow.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 bool CMenuBackgroundBitmap::s_bEnableLogoMovie = false;
 bool CMenuBackgroundBitmap::s_bGameHasSteamBackground = false;
@@ -65,6 +68,19 @@ void CMenuBackgroundBitmap::VidInit()
 
 void CMenuBackgroundBitmap::DrawInGameBackground()
 {
+	if( !stricmp( gMenu.m_gameinfo.gamefolder, "CryOfFear" ) )
+	{
+#ifdef _WIN32
+		// Optional renderer bridge. Resolve each draw so renderer reloads are safe.
+		const HMODULE renderer = GetModuleHandleA( "ref_d3d9.dll" );
+		typedef int (__cdecl *BackgroundFn)();
+		const auto blur = renderer ? reinterpret_cast<BackgroundFn>( GetProcAddress( renderer, "DX_CofPauseBackgroundV1" ) ) : nullptr;
+		if( blur ) blur();
+#endif
+		UI_FillRect( m_scPos, m_scSize, 0xB3000000 );
+		return;
+	}
+
 	UI_FillRect( m_scPos, m_scSize, uiColorBlack );
 }
 
@@ -112,6 +128,11 @@ void CMenuBackgroundBitmap::Draw()
 
 	if( EngFuncs::ClientInGame() )
 	{
+		if( !stricmp( gMenu.m_gameinfo.gamefolder, "CryOfFear" ) && !EngFuncs::GetCvarFloat( "cl_background" ) )
+		{
+			DrawInGameBackground();
+			return;
+		}
 		if( EngFuncs::GetCvarFloat( "cl_background" ) )
 		{
 			return;
