@@ -82,7 +82,7 @@ private:
 	CMenuYesNoMessageBox dialog;
 
 	bool cofMenu = false;
-	CMenuAction pauseResume, pauseNew, pauseLoad, pauseOptions, pauseQuit;
+	CMenuAction pauseResume, pauseNew, pauseLoad, pauseMultiplayer, pauseOptions, pauseQuit;
 	bool bTrainMap;
 	bool bCustomGame;
 };
@@ -177,14 +177,16 @@ void CMenuMain::_Init( void )
 		pauseResume.SetNameAndStatus( "Resume game", nullptr );
 		pauseNew.SetNameAndStatus( "New game", nullptr );
 		pauseLoad.SetNameAndStatus( "Load game", nullptr );
+		pauseMultiplayer.SetNameAndStatus( "Multiplayer", nullptr );
 		pauseOptions.SetNameAndStatus( "Options", nullptr );
 		pauseQuit.SetNameAndStatus( "Quit", nullptr );
 		pauseResume.onReleased = UI_CloseMenu;
 		pauseNew.onReleased = UI_NewGame_Menu;
 		pauseLoad.onReleased = UI_LoadGame_Menu;
+		pauseMultiplayer.onReleased = UI_MultiPlayer_Menu;
 		pauseOptions.onReleased = UI_Options_Menu;
 		pauseQuit.onReleased = VoidCb( &CMenuMain::QuitDialogCb );
-		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseOptions, &pauseQuit };
+		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseMultiplayer, &pauseOptions, &pauseQuit };
 		for( auto entry : entries )
 		{
 			entry->iFlags = QMF_DROPSHADOW;
@@ -349,13 +351,13 @@ void CMenuMain::VidInit( bool connected )
 	{
 		// 32px left inset, 28px row pitch, 72px bottom inset at 1080p.
 		const HFont face = CFontBuilder( "Times New Roman", Q_max( 9, int( 11 * uiStatic.scaleY + 0.5f ) ), 700 ).Create();
-		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseOptions, &pauseQuit };
+		CMenuAction *entries[] = { &pauseResume, &pauseNew, &pauseLoad, &pauseMultiplayer, &pauseOptions, &pauseQuit };
 		int row = 0;
 		for( auto entry : entries )
 		{
 			entry->font = face;
 			entry->charSize = 11;
-			entry->SetRect( 23, 708 - 20 * ( connected ? 4 : 3 ) + 20 * row, 240, 20 );
+			entry->SetRect( 23, 708 - 20 * ( connected ? 5 : 4 ) + 20 * row, 240, 20 );
 			if( entry != &pauseResume || connected ) ++row;
 		}
 		pauseResume.SetVisibility( connected );
